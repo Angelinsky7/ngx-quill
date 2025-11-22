@@ -41,9 +41,9 @@ export default mergeConfig(defineConfig({
     },
     reporters: process.env.GITHUB_ACTIONS
       ? [
-          'dot',
-          'github-actions'
-        ]
+        'dot',
+        'github-actions'
+      ]
       : ['dot'],
     globals: true,
     pool: 'threads',

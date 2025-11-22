@@ -2,6 +2,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser'
 import { QuillService } from './quill.service'
 
 import {
+  ChangeDetectionStrategy,
   Component,
   ViewEncapsulation,
   inject,
@@ -12,6 +13,7 @@ import { toObservable } from '@angular/core/rxjs-interop'
 import { combineLatest } from 'rxjs'
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   selector: 'quill-view-html',
   styles: [`

@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, test } from 'vitest'
 
 import { QuillViewComponent } from './quill-view.component'
 
+import { provideQuillConfig, QuillConfig } from 'ngx-quill/config'
 import Quill from 'quill'
-import { QuillModule } from './quill.module'
 
 class CustomModule {
   quill: Quill
@@ -19,35 +19,38 @@ class CustomModule {
 
 describe('Basic QuillViewComponent', () => {
   let fixture: ComponentFixture<QuillViewComponent>
+  let component: QuillViewComponent
+
+  const quillConfig: QuillConfig = {
+    customModules: [{
+      path: 'modules/custom',
+      implementation: CustomModule
+    }],
+    customOptions: [{
+      import: 'attributors/style/size',
+      whitelist: ['14']
+    }]
+  }
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [
-        QuillModule.forRoot({
-          customModules: [{
-            path: 'modules/custom',
-            implementation: CustomModule
-          }],
-          customOptions: [{
-            import: 'attributors/style/size',
-            whitelist: ['14']
-          }],
-        })
-      ],
-      providers: QuillModule.forRoot().providers
+      providers: [provideQuillConfig(quillConfig)],
+      imports: [QuillViewComponent]
     }).compileComponents()
-  })
 
-  beforeEach(async () => {
     fixture = TestBed.createComponent(QuillViewComponent)
-    await vi.waitUntil(() => !!fixture.componentInstance.quillEditor)
+    component = fixture.componentInstance
+
+    fixture.autoDetectChanges()
+    await fixture.whenStable()
   })
 
   test('should render and set default snow theme class', async () => {
     const element = fixture.nativeElement
 
+    expect(component).toBeTruthy()
+    expect(component.quillEditor).toBeDefined()
     expect(element.querySelectorAll('.ql-editor').length).toBe(1)
-    expect(fixture.componentInstance.quillEditor).toBeDefined()
     const viewElement = element.querySelector('.ql-container.ql-snow.ngx-quill-view > .ql-editor')
     expect(viewElement).toBeDefined()
   })
@@ -56,7 +59,9 @@ describe('Basic QuillViewComponent', () => {
 describe('Formats', () => {
   describe('object', () => {
     let fixture: ComponentFixture<QuillViewComponent>
+    let component: QuillViewComponent
     let content: WritableSignal<any>
+
     const modules = signal([{
       path: 'modules/test',
       implementation: CustomModule
@@ -64,33 +69,43 @@ describe('Formats', () => {
     const format = signal('object')
 
     beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        providers: [provideQuillConfig({})],
+        imports: [QuillViewComponent]
+      }).compileComponents()
+
       content = signal([{
         insert: 'Hello'
       }])
       fixture = TestBed.createComponent(QuillViewComponent, {
-        bindings: [inputBinding('content', content), inputBinding('format', format), inputBinding('customModules', modules)]
+        bindings: [
+          inputBinding('content', content),
+          inputBinding('format', format),
+          inputBinding('customModules', modules)
+        ]
       })
-      await vi.waitUntil(() => !!fixture.componentInstance.quillEditor)
+      component = fixture.componentInstance
+
+      fixture.autoDetectChanges()
+      await fixture.whenStable()
     })
 
     test('should be set object', () => {
-      const component = fixture.componentInstance
-
       expect(JSON.stringify(component.quillEditor.getContents())).toEqual(JSON.stringify({ ops: [{ insert: 'Hello\n' }] }))
     })
 
-    test('should update object content', () => {
-      const component = fixture.componentInstance
+    test('should update object content', async () => {
       content.set([{ insert: '1234' }])
-      fixture.detectChanges()
-
+      await fixture.whenStable()
       expect(JSON.stringify(component.quillEditor.getContents())).toEqual(JSON.stringify({ ops: [{ insert: '1234\n' }] }))
     })
   })
 
   describe('html', () => {
     let fixture: ComponentFixture<QuillViewComponent>
+    let component: QuillViewComponent
     let content: WritableSignal<any>
+
     const format = signal('html')
 
     beforeEach(async () => {
@@ -98,100 +113,94 @@ describe('Formats', () => {
       fixture = TestBed.createComponent(QuillViewComponent, {
         bindings: [inputBinding('content', content), inputBinding('format', format)]
       })
-      await vi.waitUntil(() => !!fixture.componentInstance.quillEditor)
+      component = fixture.componentInstance
+
+      fixture.autoDetectChanges()
+      await fixture.whenStable()
     })
 
     test('should be set html', async () => {
-      const component = fixture.componentInstance
-
       expect(component.quillEditor.getText().trim()).toEqual('Hallo')
     })
 
     test('should update html', async () => {
-      const component = fixture.componentInstance
-
       content.set('<p>test</p>')
-      fixture.detectChanges()
-
+      await fixture.whenStable()
       expect(component.quillEditor.getText().trim()).toEqual('test')
     })
   })
 
   describe('text', () => {
     let fixture: ComponentFixture<QuillViewComponent>
-
+    let component: QuillViewComponent
     let content: WritableSignal<any>
+
     const format = signal('text')
 
     beforeEach(async () => {
-      await TestBed.configureTestingModule({
-        declarations: [],
-        imports: [QuillModule],
-        providers: QuillModule.forRoot().providers
-      }).compileComponents()
-    })
+      TestBed.configureTestingModule({
+        providers: [provideQuillConfig({})],
+        imports: [QuillViewComponent]
+      })
 
-    beforeEach(async () => {
       content = signal('Hallo')
       fixture = TestBed.createComponent(QuillViewComponent, {
         bindings: [inputBinding('content', content), inputBinding('format', format)]
       })
-      await vi.waitUntil(() => !!fixture.componentInstance.quillEditor)
+      component = fixture.componentInstance
+
+      fixture.autoDetectChanges()
+      await fixture.whenStable()
     })
 
     test('should be set text', async () => {
-      const component = fixture.componentInstance
-
       expect(component.quillEditor.getText().trim()).toEqual('Hallo')
     })
 
     test('should update text', async () => {
-      const component = fixture.componentInstance
       content.set('test')
-      fixture.autoDetectChanges()
-
+      await fixture.whenStable()
       expect(component.quillEditor.getText().trim()).toEqual('test')
     })
   })
 
   describe('json', () => {
     let fixture: ComponentFixture<QuillViewComponent>
-
+    let component: QuillViewComponent
     let content: WritableSignal<any>
+
     const format = signal('json')
 
     beforeEach(async () => {
-      await TestBed.configureTestingModule({
-        declarations: [],
-        imports: [QuillModule],
-        providers: QuillModule.forRoot().providers
-      }).compileComponents()
-    })
+      TestBed.configureTestingModule({
+        imports: [QuillViewComponent],
+        providers: [provideQuillConfig({})]
+      })
 
-    beforeEach(async () => {
       content = signal(JSON.stringify([{
         insert: 'Hallo'
       }]))
       fixture = TestBed.createComponent(QuillViewComponent, {
-        bindings: [inputBinding('content', content), inputBinding('format', format)]
+        bindings: [
+          inputBinding('content', content),
+          inputBinding('format', format)
+        ]
       })
-      await vi.waitUntil(() => !!fixture.componentInstance.quillEditor)
+      component = fixture.componentInstance
+
+      fixture.autoDetectChanges()
+      await fixture.whenStable()
     })
 
     test('should set json string', async () => {
-      const component = fixture.componentInstance
-
       expect(JSON.stringify(component.quillEditor.getContents())).toEqual(JSON.stringify({ ops: [{ insert: 'Hallo\n' }] }))
     })
 
     test('should update json string', async () => {
-      const component = fixture.componentInstance
-
       content.set(JSON.stringify([{
         insert: 'Hallo 123'
       }]))
-      fixture.autoDetectChanges()
-
+      await fixture.whenStable()
       expect(JSON.stringify(component.quillEditor.getContents())).toEqual(JSON.stringify({ ops: [{ insert: 'Hallo 123\n' }] }))
     })
   })
@@ -220,11 +229,13 @@ describe('Advanced QuillViewComponent', () => {
     fixture = TestBed.createComponent(AdvancedComponent)
     vi.spyOn(fixture.componentInstance, 'handleEditorCreated')
 
-    await vi.waitUntil(() => !!fixture.componentInstance.quillEditor)
+    fixture.autoDetectChanges()
+    await fixture.whenStable()
+
     TestBed.tick()
   })
 
-  test('should emit onEditorCreated with editor instance',  async () => {
+  test('should emit onEditorCreated with editor instance', async () => {
     const viewComponent = fixture.debugElement.children[0].componentInstance
     expect(fixture.componentInstance.handleEditorCreated).toHaveBeenCalledWith(viewComponent.quillEditor)
   })

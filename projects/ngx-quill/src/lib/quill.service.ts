@@ -13,7 +13,7 @@ import {
   providedIn: 'root',
 })
 export class QuillService {
-  readonly config = inject(QUILL_CONFIG_TOKEN) || { modules:defaultModules } as QuillConfig
+  readonly config = inject(QUILL_CONFIG_TOKEN) || { modules: defaultModules } as QuillConfig
 
   private Quill!: any
 

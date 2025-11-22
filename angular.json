@@ -28,8 +28,13 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "tsConfig": "projects/ngx-quill/tsconfig.spec.json",
-            "buildTarget": "::development",
-            "runner": "vitest"
+            "runnerConfig": true,
+            "include": [
+              "projects/ngx-quill/src/**/*.spec.ts",
+              "projects/ngx-quill/src/**/*.test.ts"
+            ],
+            "setupFiles": [ "projects/ngx-quill/test-setup.ts" ],
+            "providersFile": "projects/ngx-quill/test-providers.ts"
           }
         }
       }

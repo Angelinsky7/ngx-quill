@@ -7,6 +7,7 @@ import type DeltaType from 'quill-delta'
 
 import {
   afterNextRender,
+  ChangeDetectionStrategy,
   Component,
   DestroyRef,
   Directive,
@@ -22,8 +23,8 @@ import {
   signal,
   ViewEncapsulation
 } from '@angular/core'
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop'
-import { fromEvent, Subscription } from 'rxjs'
+import { outputFromObservable, takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop'
+import { fromEvent, Subject, Subscription } from 'rxjs'
 import { mergeMap } from 'rxjs/operators'
 
 import { ControlValueAccessor, NG_VALIDATORS, NG_VALUE_ACCESSOR, Validator } from '@angular/forms'
@@ -116,7 +117,10 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
   */
   readonly defaultEmptyValue = input<any>(null)
 
-  @Output() onEditorCreated = new EventEmitter<QuillType>()
+  private readonly _onEditorCreated$ = new Subject<QuillType>()
+  readonly onEditorCreated = outputFromObservable(this._onEditorCreated$)
+
+  // @Output() onEditorCreated = new EventEmitter<QuillType>()
   @Output() onEditorChanged = new EventEmitter<EditorChangeContent | EditorChangeSelection>()
   @Output() onContentChanged = new EventEmitter<ContentChange>()
   @Output() onSelectionChanged = new EventEmitter<SelectionChange>()
@@ -325,7 +329,7 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
 
         // The `requestAnimationFrame` triggers change detection. There's no sense to invoke the `requestAnimationFrame` if anyone is
         // listening to the `onEditorCreated` event inside the template, for instance `<quill-view (onEditorCreated)="...">`.
-        if (!this.onEditorCreated.observed && !this.onValidatorChanged) {
+        if (this._onEditorCreated$.observed == false && !this.onValidatorChanged) {
           return
         }
 
@@ -336,7 +340,7 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
           if (this.onValidatorChanged) {
             this.onValidatorChanged()
           }
-          this.onEditorCreated.emit(this.quillEditor)
+          this._onEditorCreated$.next(this.quillEditor)
         })
       })
     })
@@ -457,22 +461,22 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
       return
     }
 
-      if (shouldTriggerOnModelChange) {
-        const valueGetter = this.valueGetter()
-        this.onModelChange(
-          valueGetter(this.quillEditor)
-        )
-      }
+    if (shouldTriggerOnModelChange) {
+      const valueGetter = this.valueGetter()
+      this.onModelChange(
+        valueGetter(this.quillEditor)
+      )
+    }
 
-      this.onContentChanged.emit({
-        content,
-        delta,
-        editor: this.quillEditor,
-        html,
-        oldDelta,
-        source,
-        text
-      })
+    this.onContentChanged.emit({
+      content,
+      delta,
+      editor: this.quillEditor,
+      html,
+      oldDelta,
+      source,
+      text
+    })
   }
 
   editorChangeHandler = (
@@ -659,6 +663,7 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.Emulated,
   providers: [
     {
