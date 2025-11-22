@@ -231,8 +231,6 @@ describe('Advanced QuillViewComponent', () => {
 
     fixture.autoDetectChanges()
     await fixture.whenStable()
-
-    TestBed.tick()
   })
 
   test('should emit onEditorCreated with editor instance', async () => {
