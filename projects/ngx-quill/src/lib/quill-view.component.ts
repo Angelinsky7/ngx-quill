@@ -72,6 +72,7 @@ export class QuillViewComponent {
 
     afterNextRender(() => {
       if (isPlatformServer(this._platformId)) {
+        taskCleanup()
         return
       }
 

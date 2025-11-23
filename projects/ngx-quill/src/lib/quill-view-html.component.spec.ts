@@ -7,16 +7,20 @@ vi.spyOn(window, 'alert').mockImplementation(() => { return })
 
 describe('Basic QuillViewHTMLComponent', () => {
   let fixture: ComponentFixture<QuillViewHTMLComponent>
+  let component: QuillViewHTMLComponent
 
-  beforeEach(() => {
+  beforeEach(async () => {
     fixture = TestBed.createComponent(QuillViewHTMLComponent)
+    component = fixture.componentInstance
+
+    fixture.autoDetectChanges()
+    await fixture.whenStable()
   })
 
   test('should render and set default snow theme class', async () => {
     const element = fixture.nativeElement
-
     expect(element.querySelectorAll('.ql-editor').length).toBe(1)
-    expect(fixture.componentInstance.themeClass()).toBe('ql-snow')
+    expect(component.themeClass()).toContain('ql-snow')
     const viewElement = element.querySelector('.ql-container.ql-snow.ngx-quill-view-html > .ql-editor')
     expect(viewElement).toBeDefined()
   })
@@ -25,6 +29,7 @@ describe('Basic QuillViewHTMLComponent', () => {
 describe('QuillViewHTMLComponent - content', () => {
   let fixture: ComponentFixture<QuillViewHTMLComponent>
   let content: WritableSignal<any>
+
   const theme = signal('snow')
 
   beforeEach(async () => {

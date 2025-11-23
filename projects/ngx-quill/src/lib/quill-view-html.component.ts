@@ -36,23 +36,23 @@ export class QuillViewHTMLComponent {
   readonly innerHTML = signal<SafeHtml>('')
   readonly themeClass = signal('ql-snow')
 
-  private sanitizer = inject(DomSanitizer)
-  private service = inject(QuillService)
+  private readonly _sanitizer = inject(DomSanitizer)
+  private readonly _service = inject(QuillService)
 
   constructor() {
     toObservable(this.theme).subscribe((newTheme) => {
       if (newTheme) {
-        const theme = newTheme || (this.service.config.theme ? this.service.config.theme : 'snow')
+        const theme = newTheme || (this._service.config.theme ? this._service.config.theme : 'snow')
         this.themeClass.set(`ql-${theme} ngx-quill-view-html`)
       } else {
-        const theme = this.service.config.theme ? this.service.config.theme : 'snow'
+        const theme = this._service.config.theme ? this._service.config.theme : 'snow'
         this.themeClass.set(`ql-${theme} ngx-quill-view-html`)
       }
     })
 
     combineLatest([toObservable(this.content), toObservable(this.sanitize)]).subscribe(([content, shouldSanitize]) => {
-      const sanitize = [true, false].includes(shouldSanitize) ? shouldSanitize : (this.service.config.sanitize || false)
-      const innerHTML = sanitize ? content : this.sanitizer.bypassSecurityTrustHtml(content)
+      const sanitize = [true, false].includes(shouldSanitize) ? shouldSanitize : (this._service.config.sanitize || false)
+      const innerHTML = sanitize ? content : this._sanitizer.bypassSecurityTrustHtml(content)
       this.innerHTML.set(innerHTML)
     })
   }

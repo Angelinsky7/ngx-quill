@@ -3,13 +3,12 @@ import { beforeEach, describe, expect, MockInstance } from 'vitest'
 
 import { QuillEditorComponent } from './quill-editor.component'
 
-import { Component, ViewChild } from '@angular/core'
+import { ChangeDetectionStrategy, Component, signal, ViewChild } from '@angular/core'
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms'
 import { provideQuillConfig, QuillConfig } from 'ngx-quill/config'
 import Quill from 'quill'
-import { defer, lastValueFrom } from 'rxjs'
+import { defer } from 'rxjs'
 import { QuillModule } from './quill.module'
-import { QuillService } from './quill.service'
 
 class CustomModule {
   quill: Quill
@@ -22,6 +21,7 @@ class CustomModule {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [QuillModule, FormsModule],
   selector: 'quill-test',
   template: `
@@ -94,6 +94,7 @@ class TestComponent {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, QuillModule],
   selector: 'quill-toolbar-test',
   template: `
@@ -146,6 +147,7 @@ class TestToolbarComponent {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [QuillModule, ReactiveFormsModule, FormsModule],
   selector: 'quill-reactive-test',
   template: `
@@ -159,6 +161,7 @@ class ReactiveFormTestComponent {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [QuillModule],
   selector: 'quill-module-test',
   template: `
@@ -171,6 +174,7 @@ class CustomModuleTestComponent {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [QuillModule],
   selector: 'quill-async-module-test',
   template: `
@@ -188,6 +192,7 @@ class CustomAsynchronousModuleTestComponent {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [QuillModule, FormsModule],
   selector: 'quill-link-placeholder-test',
   template: `
@@ -203,7 +208,7 @@ describe('Basic QuillEditorComponent', () => {
   let fixture: ComponentFixture<QuillEditorComponent>
   let component: QuillEditorComponent
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [provideQuillConfig({})],
       imports: [QuillEditorComponent]
@@ -212,6 +217,7 @@ describe('Basic QuillEditorComponent', () => {
     component = fixture.componentInstance
 
     fixture.autoDetectChanges()
+    await fixture.whenStable()
   })
 
   // beforeEach(async () => {
@@ -223,6 +229,7 @@ describe('Basic QuillEditorComponent', () => {
     const spy = vi.spyOn(component.quillEditor, 'off')
 
     fixture.destroy()
+    await fixture.whenStable()
 
     expect(spy).toHaveBeenCalledTimes(3)
     const quillEditor: any = component.quillEditor
@@ -233,14 +240,12 @@ describe('Basic QuillEditorComponent', () => {
 
   test('should render toolbar', async () => {
     const element = fixture.nativeElement
-
     expect(element.querySelectorAll('div.ql-toolbar.ql-snow').length).toBe(1)
     expect(component.quillEditor).toBeDefined()
   })
 
   test('should render text div', async () => {
     const element = fixture.nativeElement
-
     expect(element.querySelectorAll('div.ql-container.ql-snow').length).toBe(1)
     expect(component.quillEditor).toBeDefined()
   })
@@ -249,15 +254,16 @@ describe('Basic QuillEditorComponent', () => {
 describe('Formats', () => {
   describe('object', () => {
     @Component({
+      changeDetection: ChangeDetectionStrategy.OnPush,
       imports: [QuillModule, FormsModule],
       template: `
     <quill-editor [(ngModel)]="title" format="object" (onEditorCreated)="handleEditorCreated($event)"></quill-editor>
     `
     })
     class ObjectComponent {
-      title = [{
+      title = signal<any>([{
         insert: 'Hello'
-      }]
+      }])
       editor: any
 
       handleEditorCreated(event: any) {
@@ -275,40 +281,25 @@ describe('Formats', () => {
       })
       fixture = TestBed.createComponent(ObjectComponent, {}) as ComponentFixture<ObjectComponent>
       component = fixture.componentInstance
-    })
 
-    beforeEach(async (service: QuillService) => {
-      await vi.waitFor(() => lastValueFrom(service.getQuill()))
-
-      fixture.detectChanges()
+      fixture.autoDetectChanges()
       await fixture.whenStable()
     })
 
     test('should be set object', async () => {
-      await fixture.whenStable()
-      await fixture.whenStable()
       expect(JSON.stringify(component.editor.getContents())).toEqual(JSON.stringify({ ops: [{ insert: 'Hello\n' }] }))
     })
 
     test('should update text', async () => {
-      const component = fixture.componentInstance
-      await fixture.whenStable()
-      component.title = [{ insert: '1234' }]
-      fixture.detectChanges()
-
+      component.title.set([{ insert: '1234' }])
       await fixture.whenStable()
       expect(JSON.stringify(component.editor.getContents())).toEqual(JSON.stringify({ ops: [{ insert: '1234\n' }] }))
     })
 
     test('should update model if editor text changes', async () => {
-      const component = fixture.componentInstance
-
-      await fixture.whenStable()
       component.editor.setContents([{ insert: '123' }], 'user')
-      fixture.detectChanges()
-
       await fixture.whenStable()
-      expect(JSON.stringify(component.title)).toEqual(JSON.stringify({ ops: [{ insert: '123\n' }] }))
+      expect(JSON.stringify(component.title())).toEqual(JSON.stringify({ ops: [{ insert: '123\n' }] }))
     })
   })
 
