@@ -24,7 +24,7 @@ import {
 } from '@angular/core'
 import { outputFromObservable, takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop'
 import { fromEvent, Subject, Subscription } from 'rxjs'
-import { mergeMap } from 'rxjs/operators'
+import { debounceTime, mergeMap } from 'rxjs/operators'
 
 import { ControlValueAccessor, NG_VALIDATORS, NG_VALUE_ACCESSOR, Validator } from '@angular/forms'
 
@@ -190,6 +190,8 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
           this._renderer.setStyle(this._editorElem, key, this.styles()[key])
         })
       }
+
+      this._previousStyles = currentStyling
     })
     toObservable(this.classes).subscribe((classes) => {
       const currentClasses = classes
@@ -202,6 +204,8 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
       if (currentClasses) {
         this.addClasses(currentClasses)
       }
+
+      this._previousClasses = currentClasses
     })
     toObservable(this.debounceTime).subscribe((debounceTime) => {
       if (!this._quillEditor) {
@@ -251,10 +255,13 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
           Object.keys(styles).forEach((key: string) => {
             this._renderer.setStyle(this._editorElem, key, styles[key])
           })
+          this._previousStyles = styles
         }
 
-        if (this.classes()) {
-          this.addClasses(this.classes())
+        const classes = this.classes()
+        if (classes) {
+          this.addClasses(classes)
+          this._previousClasses = classes
         }
 
         this.customOptions().forEach((customOption) => {
@@ -550,6 +557,7 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
     QuillEditorBase.normalizeClassNames(classList).forEach((c: string) => {
       this._renderer.removeClass(this._editorElem, c)
     })
+    console.log('remov', classList)
   }
 
   writeValue(currentValue: any) {
@@ -670,6 +678,40 @@ export abstract class QuillEditorBase implements ControlValueAccessor, Validator
 
   private _addQuillEventListeners(): void {
     this._dispose()
+
+    this._eventsSubscription = new Subscription()
+    this._eventsSubscription.add(
+      // mark model as touched if editor lost focus
+      fromEvent(this.quillEditor, 'selection-change').subscribe(
+        ([range, oldRange, source]) => {
+          this.selectionChangeHandler(range as any, oldRange as any, source)
+        }
+      )
+    )
+
+    // The `fromEvent` supports passing JQuery-style event targets, the editor has `on` and `off` methods which
+    // will be invoked upon subscription and teardown.
+    let textChange$ = fromEvent(this.quillEditor, 'text-change')
+    let editorChange$ = fromEvent(this.quillEditor, 'editor-change')
+
+    if (typeof this.debounceTime() === 'number') {
+      textChange$ = textChange$.pipe(debounceTime(this.debounceTime()))
+      editorChange$ = editorChange$.pipe(debounceTime(this.debounceTime()))
+    }
+
+    this._eventsSubscription.add(
+      // update model if text changes
+      textChange$.subscribe(([delta, oldDelta, source]) => {
+        this.textChangeHandler(delta as any, oldDelta as any, source)
+      })
+    )
+
+    this._eventsSubscription.add(
+      // triggered if selection or text changed
+      editorChange$.subscribe(([event, current, old, source]) => {
+        this.editorChangeHandler(event as 'text-change' | 'selection-change', current, old, source)
+      })
+    )
   }
 
   private _dispose(): void {

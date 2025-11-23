@@ -311,7 +311,7 @@ describe('Formats', () => {
     `
     })
     class HTMLComponent {
-      title = '<p>Hallo<ol><li>ordered</li></ol><ul><li>unordered</li></ul></p>'
+      title = signal<string>('<p>Hallo<ol><li>ordered</li></ol><ul><li>unordered</li></ul></p>')
       editor: any
 
       handleEditorCreated(event: any) {
@@ -326,7 +326,7 @@ describe('Formats', () => {
     `
     })
     class HTMLSanitizeComponent {
-      title = '<p>Hallo <img src="wroooong.jpg" onerror="window.alert(\'sanitize me\')"></p>'
+      title = signal<string>('<p>Hallo <img src="wroooong.jpg" onerror="window.alert(\'sanitize me\')"></p>')
       editor: any
 
       handleEditorCreated(event: any) {
@@ -337,13 +337,16 @@ describe('Formats', () => {
     let fixture: ComponentFixture<HTMLComponent>
     let component: HTMLComponent
 
-    beforeEach(() => {
+    beforeEach(async () => {
       TestBed.configureTestingModule({
         providers: [provideQuillConfig({})],
         imports: [HTMLComponent]
       })
       fixture = TestBed.createComponent(HTMLComponent)
       component = fixture.componentInstance
+
+      fixture.autoDetectChanges()
+      await fixture.whenStable()
     })
 
     test('should be set html', async () => {
@@ -353,33 +356,28 @@ unordered`)
     })
 
     test('should update html', async () => {
-      component.title = '<p>test</p>'
-      fixture.detectChanges()
+      component.title.set('<p>test</p>')
       await fixture.whenStable()
       expect(component.editor.getText().trim()).toEqual('test')
     })
 
     test('should update model if editor html changes', async () => {
-      expect(component.title.trim()).toEqual('<p>Hallo<ol><li>ordered</li></ol><ul><li>unordered</li></ul></p>')
+      expect(component.title().trim()).toEqual('<p>Hallo<ol><li>ordered</li></ol><ul><li>unordered</li></ul></p>')
       component.editor.setText('1234', 'user')
-      fixture.detectChanges()
       await fixture.whenStable()
-      expect(component.title.trim()).toEqual('<p>1234</p>')
+      expect(component.title().trim()).toEqual('<p>1234</p>')
     })
 
     test('should sanitize html', async () => {
       const sanfixture = TestBed.createComponent(HTMLSanitizeComponent) as ComponentFixture<HTMLSanitizeComponent>
-      sanfixture.detectChanges()
-
-      await sanfixture.whenStable()
       const incomponent = sanfixture.componentInstance
+      sanfixture.autoDetectChanges()
+      await sanfixture.whenStable()
 
       expect(JSON.stringify(incomponent.editor.getContents()))
         .toEqual(JSON.stringify({ ops: [{ insert: 'Hallo ' }, { insert: { image: 'wroooong.jpg' } }, { insert: '\n' }] }))
 
-      incomponent.title = '<p><img src="xxxx" onerror="window.alert()"></p>'
-      sanfixture.detectChanges()
-
+      incomponent.title.set('<p><img src="xxxx" onerror="window.alert()"></p>')
       await sanfixture.whenStable()
       expect(JSON.stringify(incomponent.editor.getContents())).toEqual(JSON.stringify({ ops: [{ insert: { image: 'xxxx' } }, { insert: '\n' }] }))
     })
@@ -393,7 +391,7 @@ unordered`)
     `
     })
     class TextComponent {
-      title = 'Hallo'
+      title = signal<string>('Hallo')
       editor: any
 
       handleEditorCreated(event: any) {
@@ -404,42 +402,39 @@ unordered`)
     let fixture: ComponentFixture<TextComponent>
     let component: TextComponent
 
-    beforeEach(() => {
+    beforeEach(async () => {
       TestBed.configureTestingModule({
         providers: [provideQuillConfig({})],
         imports: [TextComponent],
       })
       fixture = TestBed.createComponent(TextComponent)
       component = fixture.componentInstance
+
+      fixture.autoDetectChanges()
+      await fixture.whenStable()
     })
 
     test('should be set text', async () => {
-      await fixture.whenStable()
       expect(component.editor.getText().trim()).toEqual('Hallo')
     })
 
     test('should update text', async () => {
-      component.title = 'test'
-      fixture.detectChanges()
-
+      component.title.set('test')
       await fixture.whenStable()
       expect(component.editor.getText().trim()).toEqual('test')
     })
 
     test('should update model if editor text changes', async () => {
-      await fixture.whenStable()
       component.editor.setText('123', 'user')
-      fixture.detectChanges()
       await fixture.whenStable()
-      expect(component.title.trim()).toEqual('123')
+      expect(component.title().trim()).toEqual('123')
     })
 
     test('should not update model if editor content changed by api', async () => {
-      await fixture.whenStable()
       component.editor.setText('123')
       fixture.detectChanges()
       await fixture.whenStable()
-      expect(component.title.trim()).toEqual('Hallo')
+      expect(component.title().trim()).toEqual('Hallo')
     })
   })
 
@@ -452,9 +447,9 @@ unordered`)
     `
     })
     class JSONComponent {
-      title = JSON.stringify([{
+      title = signal<string>(JSON.stringify([{
         insert: 'Hallo'
-      }])
+      }]))
       editor: any
 
       handleEditorCreated(event: any) {
@@ -470,9 +465,9 @@ unordered`)
     `
     })
     class JSONInvalidComponent {
-      title = JSON.stringify([{
+      title = signal<string>(JSON.stringify([{
         insert: 'Hallo'
-      }]) + '{'
+      }]) + '{')
       editor: any
 
       handleEditorCreated(event: any) {
@@ -483,13 +478,16 @@ unordered`)
     let fixture: ComponentFixture<JSONComponent>
     let component: JSONComponent
 
-    beforeEach(() => {
+    beforeEach(async () => {
       TestBed.configureTestingModule({
         providers: [provideQuillConfig({})],
         imports: [JSONComponent]
       })
       fixture = TestBed.createComponent(JSONComponent)
       component = fixture.componentInstance
+
+      fixture.autoDetectChanges()
+      await fixture.whenStable()
     })
 
     test('should set json string', async () => {
@@ -497,10 +495,9 @@ unordered`)
     })
 
     test('should update json string', async () => {
-      component.title = JSON.stringify([{
+      component.title.set(JSON.stringify([{
         insert: 'Hallo 123'
-      }])
-      fixture.detectChanges()
+      }]))
       await fixture.whenStable()
       expect(JSON.stringify(component.editor.getContents())).toEqual(JSON.stringify({ ops: [{ insert: 'Hallo 123\n' }] }))
     })
@@ -509,25 +506,23 @@ unordered`)
       component.editor.setContents([{
         insert: 'Hallo 123'
       }], 'user')
-      fixture.detectChanges()
       await fixture.whenStable()
-
-      expect(component.title).toEqual(JSON.stringify({ ops: [{ insert: 'Hallo 123\n' }] }))
+      expect(component.title()).toEqual(JSON.stringify({ ops: [{ insert: 'Hallo 123\n' }] }))
     })
 
     test('should set as text if invalid JSON', async () => {
       const infixture = TestBed.createComponent(JSONInvalidComponent) as ComponentFixture<JSONInvalidComponent>
-      infixture.detectChanges()
-      await infixture.whenStable()
       const incomponent = infixture.componentInstance
+      infixture.autoDetectChanges()
+      await infixture.whenStable()
+
       expect(incomponent.editor.getText().trim()).toEqual(JSON.stringify([{
         insert: 'Hallo'
       }]) + '{')
 
-      incomponent.title = JSON.stringify([{
+      incomponent.title.set(JSON.stringify([{
         insert: 'Hallo 1234'
-      }]) + '{'
-      infixture.detectChanges()
+      }]) + '{')
       await infixture.whenStable()
       expect(incomponent.editor.getText().trim()).toEqual(JSON.stringify([{
         insert: 'Hallo 1234'
@@ -544,15 +539,15 @@ describe('Dynamic styles', () => {
     [bounds]="'self'"
     [(ngModel)]="title"
     format="text"
-    [styles]="style"
+    [styles]="style()"
     (onEditorCreated)="handleEditorCreated($event)"></quill-editor>
   `
   })
   class StylingComponent {
-    title = 'Hallo'
-    style = {
+    title = signal<string>('Hallo')
+    style = signal({
       backgroundColor: 'red'
-    }
+    })
     editor: any
 
     handleEditorCreated(event: any) {
@@ -563,13 +558,16 @@ describe('Dynamic styles', () => {
   let fixture: ComponentFixture<StylingComponent>
   let component: StylingComponent
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [provideQuillConfig({})],
       imports: [StylingComponent],
     })
     fixture = TestBed.createComponent(StylingComponent)
     component = fixture.componentInstance
+
+    fixture.autoDetectChanges()
+    await fixture.whenStable()
   })
 
   test('set inital styles', async () => {
@@ -577,10 +575,9 @@ describe('Dynamic styles', () => {
   })
 
   test('set style', async () => {
-    component.style = {
+    component.style.set({
       backgroundColor: 'gray'
-    }
-    fixture.detectChanges()
+    })
     await fixture.whenStable()
     expect(component.editor.container.style.backgroundColor).toEqual('gray')
   })
@@ -594,13 +591,13 @@ describe('Dynamic classes', () => {
     [bounds]="'self'"
     [(ngModel)]="title"
     format="text"
-    [classes]="classes"
+    [classes]="classes()"
     (onEditorCreated)="handleEditorCreated($event)"></quill-editor>
   `
   })
   class ClassesComponent {
-    title = 'Hallo'
-    classes = 'test-class1 test-class2'
+    title = signal<string>('Hallo')
+    classes = signal<string>('test-class1 test-class2')
     editor: any
 
     handleEditorCreated(event: any) {
@@ -611,13 +608,16 @@ describe('Dynamic classes', () => {
   let fixture: ComponentFixture<ClassesComponent>
   let component: ClassesComponent
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [provideQuillConfig({})],
       imports: [ClassesComponent],
     })
     fixture = TestBed.createComponent(ClassesComponent)
     component = fixture.componentInstance
+
+    fixture.autoDetectChanges()
+    await fixture.whenStable()
   })
 
   test('should set initial classes', async () => {
@@ -626,10 +626,10 @@ describe('Dynamic classes', () => {
   })
 
   test('should set class', async () => {
-    component.classes = 'test-class2 test-class3'
-    fixture.detectChanges()
+    component.classes.set('test-class2 test-class3')
     await fixture.whenStable()
 
+    console.log(component.editor.container.classList)
     expect(component.editor.container.classList.contains('test-class1')).toBe(false)
     expect(component.editor.container.classList.contains('test-class2')).toBe(true)
     expect(component.editor.container.classList.contains('test-class3')).toBe(true)
@@ -639,13 +639,11 @@ describe('Dynamic classes', () => {
 describe('class normalization function', () => {
   test('should trim white space', () => {
     const classList = QuillEditorComponent.normalizeClassNames('test-class  ')
-
     expect(classList).toEqual(['test-class'])
   })
 
   test('should not return empty strings as class names', () => {
     const classList = QuillEditorComponent.normalizeClassNames('test-class   test-class2')
-
     expect(classList).toEqual(['test-class', 'test-class2'])
   })
 })
@@ -654,13 +652,16 @@ describe('Reactive forms integration', () => {
   let fixture: ComponentFixture<ReactiveFormTestComponent>
   let component: ReactiveFormTestComponent
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [provideQuillConfig({})],
       imports: [ReactiveFormTestComponent],
     })
     fixture = TestBed.createComponent(ReactiveFormTestComponent)
     component = fixture.componentInstance
+
+    fixture.autoDetectChanges()
+    await fixture.whenStable()
   })
 
   test('should be disabled', () => {
@@ -683,14 +684,10 @@ describe('Reactive forms integration', () => {
 
   test('should leave form pristine when content of editor changed programmatically', async () => {
     const values: (string | null)[] = []
-
-    fixture.detectChanges()
-    await fixture.whenStable()
-
     fixture.componentInstance.formControl.valueChanges.subscribe((value: string) => values.push(value))
     fixture.componentInstance.formControl.patchValue('1234')
 
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
 
     expect(fixture.nativeElement.querySelector('div.ql-editor').textContent).toEqual('1234')
@@ -700,20 +697,17 @@ describe('Reactive forms integration', () => {
   })
 
   test('should mark form dirty when content of editor changed by user', async () => {
-    fixture.detectChanges()
-    await fixture.whenStable()
     fixture.componentInstance.editor.quillEditor.setText('1234', 'user')
-    fixture.detectChanges()
+
+    // fixture.detectChanges()
     await fixture.whenStable()
+
     expect(fixture.nativeElement.querySelector('div.ql-editor').textContent).toEqual('1234')
     expect(fixture.componentInstance.formControl.dirty).toBeTruthy()
     expect(fixture.componentInstance.formControl.value).toEqual('<p>1234</p>')
   })
 
   test('should validate initial content and do not mark it as invalid', async () => {
-    fixture.detectChanges()
-    await fixture.whenStable()
-
     expect(fixture.nativeElement.querySelector('div.ql-editor').textContent).toEqual('a')
     expect(fixture.componentInstance.formControl.pristine).toBeTruthy()
     expect(fixture.componentInstance.formControl.value).toEqual('a')
@@ -721,11 +715,9 @@ describe('Reactive forms integration', () => {
   })
 
   test('should write the defaultEmptyValue when editor is emptied', async () => {
-    fixture.detectChanges()
-    await fixture.whenStable()
-
     fixture.componentInstance.editor.quillEditor.setText('', 'user')
-    fixture.detectChanges()
+
+    // fixture.detectChanges()
     await fixture.whenStable()
 
     // default empty value is null
@@ -745,13 +737,16 @@ describe('Advanced QuillEditorComponent', () => {
     registerSpy = vi.spyOn(Quill, 'register')
   })
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [provideQuillConfig({})],
       imports: [FormsModule, TestComponent],
     })
     fixture = TestBed.createComponent(TestComponent)
     component = fixture.componentInstance
+
+    fixture.autoDetectChanges()
+    await fixture.whenStable()
 
     handleEditorCreatedSpy = vi.spyOn(fixture.componentInstance, 'handleEditorCreated')
 
@@ -768,9 +763,6 @@ describe('Advanced QuillEditorComponent', () => {
     const editorElem = fixture.debugElement.children[0]
     const editorCmp = fixture.debugElement.children[0].componentInstance
 
-    fixture.detectChanges()
-    await fixture.whenStable()
-
     expect(editorCmp.readOnly()).toBe(false)
 
     component.isReadOnly = true
@@ -778,7 +770,7 @@ describe('Advanced QuillEditorComponent', () => {
     expect(Quill.import).toHaveBeenCalledWith('attributors/style/size')
     expect(Quill.register).toHaveBeenCalled()
 
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
 
     expect(editorCmp.readOnly()).toBe(true)
@@ -787,12 +779,10 @@ describe('Advanced QuillEditorComponent', () => {
   })
 
   test('should update editor style', async () => {
-    fixture.detectChanges()
-    await fixture.whenStable()
     const editorElem = fixture.debugElement.children[0]
 
     component.style = { backgroundColor: 'red' }
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
 
     expect(editorElem.nativeElement.querySelector('div[quill-editor-element]').style.backgroundColor).toBe('red')
@@ -800,68 +790,59 @@ describe('Advanced QuillEditorComponent', () => {
   })
 
   test('should update editor style to null and readd styling', async () => {
-    fixture.detectChanges()
-    await fixture.whenStable()
     const editorElem = fixture.debugElement.children[0]
 
     component.style = null
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
 
     component.style = { color: 'red' }
     expect(editorElem.nativeElement.querySelector('div[quill-editor-element]').style.height).toEqual('')
 
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
 
     expect(editorElem.nativeElement.querySelector('div[quill-editor-element]').style.color).toBe('red')
   })
 
   test('should not update editor style if nothing changed', async () => {
-    fixture.detectChanges()
-    await fixture.whenStable()
     const editorElem = fixture.debugElement.children[0]
 
     component.isReadOnly = true
-    fixture.detectChanges()
+    // fixture.detectChanges()
+    await fixture.whenStable()
 
-    await fixture.whenStable
     expect(editorElem.nativeElement.querySelector('div[quill-editor-element]').style.height).toEqual('30px')
   })
 
   test('should set touched state correctly', async () => {
-    fixture.detectChanges()
-    await fixture.whenStable()
     const editorFixture = fixture.debugElement.children[0]
 
     editorFixture.componentInstance.quillEditor.setSelection(0, 5)
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
     editorFixture.componentInstance.quillEditor.setSelection(null)
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
 
     expect(editorFixture.nativeElement.className).toMatch('ng-untouched')
 
     editorFixture.componentInstance.quillEditor.setSelection(0, 5, 'user')
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
     editorFixture.componentInstance.quillEditor.setSelection(null, 'user')
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
 
     expect(editorFixture.nativeElement.className).toMatch('ng-touched')
   })
 
   test('should set required state correctly', async () => {
-    fixture.detectChanges()
-    await fixture.whenStable()
-
     // get editor component
     const editorElement = fixture.debugElement.children[0].nativeElement
 
     fixture.componentInstance.title = ''
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
     expect(editorElement.className).toMatch('ng-valid')
   })
@@ -875,35 +856,31 @@ describe('Advanced QuillEditorComponent', () => {
     vi.spyOn(fixture.componentInstance, 'handleChange')
     vi.spyOn(fixture.componentInstance, 'handleEditorChange')
 
-    fixture.detectChanges()
-    await fixture.whenStable()
-
     const editorFixture = fixture.debugElement.children[0]
     editorFixture.componentInstance.quillEditor.setText('1234', 'user')
-    fixture.detectChanges()
+    // fixture.detectChanges()
     await fixture.whenStable()
 
     expect(fixture.componentInstance.handleChange).toHaveBeenCalledWith(fixture.componentInstance.changed)
     expect(fixture.componentInstance.handleEditorChange).toHaveBeenCalledWith(fixture.componentInstance.changedEditor)
   })
 
-  test('should emit onContentChanged with a delay after content of editor changed + editor changed', () => {
+  test('should emit onContentChanged with a delay after content of editor changed + editor changed', async () => {
     fixture.componentInstance.debounceTime = 400
     vi.spyOn(fixture.componentInstance, 'handleChange')
     vi.spyOn(fixture.componentInstance, 'handleEditorChange')
 
-    fixture.detectChanges()
-    TestBed.tick()
-
     const editorFixture = fixture.debugElement.children[0]
     editorFixture.componentInstance.quillEditor.setText('foo', 'bar')
-    fixture.detectChanges()
-    TestBed.tick()
+    // fixture.detectChanges()
+    // TestBed.tick()
+    await fixture.whenStable()
 
     expect(fixture.componentInstance.handleChange).not.toHaveBeenCalled()
     expect(fixture.componentInstance.handleEditorChange).not.toHaveBeenCalled()
 
-    TestBed.tick()
+    // TestBed.tick()
+    await fixture.whenStable()
 
     expect(fixture.componentInstance.handleChange).toHaveBeenCalledWith(fixture.componentInstance.changed)
     expect(fixture.componentInstance.handleEditorChange).toHaveBeenCalledWith(fixture.componentInstance.changedEditor)
